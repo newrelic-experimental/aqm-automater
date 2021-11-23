@@ -6,7 +6,7 @@
 
 ## Installation
 
-> npm install 
+> npm install to install all dependencies 
 
 ## Getting Started
 > This script automates the following AQM steps.  
@@ -17,7 +17,7 @@
 ## Usage
 > you need a newrelic account number and an user api key from that account to use this script. 
 > 
-> node main.js --account "your acount number"  -- key "your user api key"
+> node main.js --account "your newrelic acount number"  --key "your newrelic user api key"
 > 
 
 ## Building
