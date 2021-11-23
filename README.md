@@ -17,8 +17,8 @@
 ## Usage
 > you need a newrelic account number and an user api key from that account to use this script. 
 > 
-> node main.js --account <your acount number>  -- key <your user api key> 
-
+> node main.js --account "your acount number"  -- key "your user api key"
+> 
 
 ## Building
 
