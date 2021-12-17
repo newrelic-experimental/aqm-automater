@@ -4,8 +4,6 @@ var axios = require('axios');
 var fs = require('fs');
 var fsp = require('fs').promises;
 
-var https = require('https')
-
 var current_policies = []
 var webhook_notification_channelid = "";  // the id of the new wh channel we created.
 const commandLineArgs = require('command-line-args')
@@ -37,13 +35,10 @@ if(options != undefined)
         return
     }
 }
-//console.log(options)
+
 
 accountidval = options.account;
 API_KEY = options.key;
-
-
-
 
 async function  dispatchToNewRelic(datapayload, callback)
 {
@@ -79,7 +74,7 @@ async function  dispatchToNewRelic(datapayload, callback)
 
 async function  downloadTemplate(callback)
 {
-    const file = fs.createWriteStream(DB_TEMPLATE);
+
     var config = {
         method: 'get',
         url: 'https://raw.githubusercontent.com/newrelic/oma-resource-center/main/src/content/docs/oma/value-drivers/uptime-performance-and-reliability/use-cases/alert-quality-management/alert-quality-management.json',
@@ -89,10 +84,6 @@ async function  downloadTemplate(callback)
     await axios(config)
         .then(function (response) {
             response.data.pipe(fs.createWriteStream(DB_TEMPLATE));
-            // fs.writeFile(DB_TEMPLATE, JSON.stringify(response.data, null, 4), function (err) {
-            //     console.log(err);
-            // });
-
             if (response.status == 200) {
                 if(response.data.errors != null)
                 {
