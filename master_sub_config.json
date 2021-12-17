@@ -1,0 +1,20 @@
+{
+  "masteraccount": {
+    "account_id": "<master_accountid>",
+    "api_key": " <api key> "
+  },
+  "subaccounts": [
+    {
+      "name": "1",
+      "api_key": ""
+    },
+    {
+      "name": "2",
+      "api_key": ""
+    },
+    {
+      "name": "3",
+      "api_key": ""
+    }
+  ]
+}
