@@ -1,18 +1,22 @@
-var accountidval = undefined; 
+var accountidval = undefined;
 var API_KEY = undefined;
 var axios = require('axios');
 var fs = require('fs');
+var fsp = require('fs').promises;
 
+var https = require('https')
 
 var current_policies = []
 var webhook_notification_channelid = "";  // the id of the new wh channel we created.
 const commandLineArgs = require('command-line-args')
 
+const DB_TEMPLATE = './alert-quality-mgt-template.json';
 const optionDefinitions = [
     { name: 'key', alias: 'k', type: String },
     { name: 'account', alias: 'a', type: Number }
 ]
 
+var customized_db = "";  // holder
 // args are account number (rpm id)   -a
 // key  -k
 // both must be present. so we need 4 arguments total.
@@ -37,12 +41,9 @@ if(options != undefined)
 
 accountidval = options.account;
 API_KEY = options.key;
-const rawdata = fs.readFileSync('alert-quality-mgt.json', 'utf8');
 
-// fixup the db template.. with account number
-const replacer = new RegExp("XXXXXXX", 'g')
-var fixedup = rawdata.replace(replacer, accountidval);
-let dashboard_temp = JSON.parse(fixedup);
+
+
 
 async function  dispatchToNewRelic(datapayload, callback)
 {
@@ -75,95 +76,79 @@ async function  dispatchToNewRelic(datapayload, callback)
         });
 }
 
+
+async function  downloadTemplate(callback)
+{
+    const file = fs.createWriteStream(DB_TEMPLATE);
+    var config = {
+        method: 'get',
+        url: 'https://raw.githubusercontent.com/newrelic/oma-resource-center/main/src/content/docs/oma/value-drivers/uptime-performance-and-reliability/use-cases/alert-quality-management/alert-quality-management.json',
+        responseType: "stream"
+    };
+
+    await axios(config)
+        .then(function (response) {
+            response.data.pipe(fs.createWriteStream(DB_TEMPLATE));
+            // fs.writeFile(DB_TEMPLATE, JSON.stringify(response.data, null, 4), function (err) {
+            //     console.log(err);
+            // });
+
+            if (response.status == 200) {
+                if(response.data.errors != null)
+                {
+                    callback("failed: " + JSON.stringify(response.data.errors), response.data.data);
+                }
+                else
+                    callback("success", response.data.data);
+            }
+            else {
+                callback("failed", undefined);
+            }
+        })
+        .catch(function (error) {
+            callback("exception:" + error );
+        });
+}
+
+async function customize_db()
+{
+    // fixup the downloaded db template.. with account number
+    console.log('Customizing dashboard template')
+    const data = await fsp.readFile(DB_TEMPLATE, 'utf8');  // note this is using the promises version.
+    // console.log("readfile" + data)
+    var fixedup = data.replace(/0000000/g, accountidval);
+    customized_db = JSON.parse(fixedup);
+    console.log("created custom dashboard with account: " + accountidval)
+    //console.log("cust_db" + JSON.stringify(customized_db));
+};
+
+
+
 async function runner() {
 
-
-    //  *************** get policies ids ***************************************
-    var datapayload_getpolicys = JSON.stringify({
-        query: `query ($accountidval: Int!) {
-           actor {
-               account(id: $accountidval) {
-                alerts {
-                    policiesSearch {
-                        policies {
-                            id
-                            name
-                            incidentPreference
-                        }
-                    }
-                }
-                }
+    // *************************** dashboard start, ********************************************
+    // check if old template file exissts... remove it if so, we want the latest one.
+    if(fs.existsSync(DB_TEMPLATE))
+    {
+        console.log("removing pre-existing template file if present")
+        fs.unlink(DB_TEMPLATE, (err) => {
+            if (err) {
+                console.error(err)
             }
-         }`,
-        variables: { "accountidval": accountidval}
-    });
-
-    await dispatchToNewRelic(datapayload_getpolicys, function (result, data) {
-
-        if (data.actor.account.alerts.policiesSearch != undefined) {
-
-            for (var i = 0; i < data.actor.account.alerts.policiesSearch.policies.length; i++) {
-                current_policies.push(data.actor.account.alerts.policiesSearch.policies[i].id)
-            }
-        }
-
-        console.log("get policies " + result + JSON.stringify(current_policies));
-    })
-
-
-// ******************************* create webhook *************************************
-
-    var wh1 = {
-        webhook: {
-            //  customPayloadType: JSON,
-            name: "AQM Events",
-            baseUrl: "https://insights-collector.newrelic.com/v1/accounts/"+ accountidval+"/events",
-            customHttpHeaders: [{name: "X-Insert-Key", value: API_KEY}],
-            customPayloadBody: '{ "eventType":"nrAQMIncident", "account_id": "$ACCOUNT_ID", "account_name" : "$ACCOUNT_NAME", "closed_violations_count_critical": "$CLOSED_VIOLATIONS_COUNT_CRITICAL",  "closed_violations_count_warning": "$CLOSED_VIOLATIONS_COUNT_WARNING" }',
-            customPayloadType: 'JSON'
-        }
+            console.log("File removed")
+        })
     }
 
-    var datapayload_alertwebhook = JSON.stringify({
-        query: `mutation ($accountidval: Int!, $alertchannel: AlertsNotificationChannelCreateConfiguration!) {
-        alertsNotificationChannelCreate(accountId: $accountidval, notificationChannel: $alertchannel) {
-                notificationChannel {
-                ... on AlertsWebhookNotificationChannel {
-                    id
-                name
-                  }
-                }
-                
-                error {
-                    description
-                    errorType
-                    
-                }
-            }
-         }`,
-        variables: {"accountidval": accountidval, "alertchannel": wh1}
-    });
-
-
-
-    await dispatchToNewRelic(datapayload_alertwebhook, function (result, data) {
-
-        if (data.alertsNotificationChannelCreate.notificationChannel != undefined) {
-            webhook_notification_channelid = data.alertsNotificationChannelCreate.notificationChannel.id;
-        }
-
-        console.log("webhook channel id: " + webhook_notification_channelid)
-        //   console.log("alert webhook setup " + result  + webhook_notification_channelid);
+    // download the template from git hub.
+    await downloadTemplate(function(result){
+        console.log("dashboard template download: " + result);
+        // if success,  else fail out.
     })
 
-// **************************** END Webhook **********************
+    // customize the template.
+    await customize_db();
 
-
-
-// *************************** dashboard , ********************************************
-    // todo:  add check for pre-existing db with that name .. if exists,  don't add.
-
-
+    console.log("Uploading dashboard to your account")
     var datapayload2 = JSON.stringify({
         query: `mutation ($accountidval: Int!, $dashboardval: DashboardInput!) {
             dashboardCreate(accountId: $accountidval, dashboard: $dashboardval) {
@@ -172,46 +157,129 @@ async function runner() {
                     }
                 }
              }`,
-        variables: { "accountidval": accountidval, "dashboardval": dashboard_temp }
+        variables: { "accountidval": accountidval, "dashboardval": customized_db }
     });
 
 
     await dispatchToNewRelic(datapayload2, function(result, data){
-
-        console.log("dashboard setup " + result);
+        console.log("dashboard import result: " + result);
     })
 
 
-    /*************************** add notification channel to all policies **************/
 
-   // webhook_notification_channelid = "5727280";  // the id of the new wh channel we created.
-   // current_policies.push("1254689");
-    for(var pidx = 0 ; pidx < current_policies.length; pidx++ ) {
 
-        const targetpolid = current_policies[pidx];
-
-        var datapayload_addchannel = JSON.stringify({
-            query: `mutation ($accountidval: Int!, $channelidval: ID!, $policyidval: ID!) { 
-        alertsNotificationChannelsAddToPolicy(accountId: $accountidval, notificationChannelIds: [$channelidval], policyId: $policyidval) {
-             errors {
-                  description
-                  errorType
-                  notificationChannelId
+        //  *************** get policies ids ***************************************
+        var datapayload_getpolicys = JSON.stringify({
+            query: `query ($accountidval: Int!) {
+               actor {
+                   account(id: $accountidval) {
+                    alerts {
+                        policiesSearch {
+                            policies {
+                                id
+                                name
+                                incidentPreference
+                            }
+                        }
+                    }
+                    }
                 }
-            }
-         }`,
-            variables: {
-                "accountidval": accountidval,
-                "channelidval": webhook_notification_channelid,
-                "policyidval": targetpolid
-            }
+             }`,
+            variables: { "accountidval": accountidval}
         });
 
+        console.log("Fetching list of polcies in account: " + accountidval)
+        await dispatchToNewRelic(datapayload_getpolicys, function (result, data) {
 
-        await dispatchToNewRelic(datapayload_addchannel, function (result, data) {
-            console.log("add channel to policy " + result);
+            if (data.actor.account.alerts.policiesSearch != undefined) {
+
+                for (var i = 0; i < data.actor.account.alerts.policiesSearch.policies.length; i++) {
+                    current_policies.push(data.actor.account.alerts.policiesSearch.policies[i].id)
+                }
+            }
+
+            console.log("get policies " + result + JSON.stringify(current_policies));
         })
-    }
+
+
+    // ******************************* create webhook *************************************
+
+        var wh1 = {
+            webhook: {
+                //  customPayloadType: JSON,
+                name: "AQM Events",
+                baseUrl: "https://insights-collector.newrelic.com/v1/accounts/"+ accountidval+"/events",
+                customHttpHeaders: [{name: "X-Insert-Key", value: API_KEY}],
+                customPayloadBody: '{ "eventType":"nrAQMIncident", "account_id": "$ACCOUNT_ID", "account_name" : "$ACCOUNT_NAME", "closed_violations_count_critical": "$CLOSED_VIOLATIONS_COUNT_CRITICAL",  "closed_violations_count_warning": "$CLOSED_VIOLATIONS_COUNT_WARNING" }',
+                customPayloadType: 'JSON'
+            }
+        }
+
+        var datapayload_alertwebhook = JSON.stringify({
+            query: `mutation ($accountidval: Int!, $alertchannel: AlertsNotificationChannelCreateConfiguration!) {
+            alertsNotificationChannelCreate(accountId: $accountidval, notificationChannel: $alertchannel) {
+                    notificationChannel {
+                    ... on AlertsWebhookNotificationChannel {
+                        id
+                    name
+                      }
+                    }
+
+                    error {
+                        description
+                        errorType
+
+                    }
+                }
+             }`,
+            variables: {"accountidval": accountidval, "alertchannel": wh1}
+        });
+
+        console.log("Creating webhook in account: " + accountidval)
+        await dispatchToNewRelic(datapayload_alertwebhook, function (result, data) {
+            if (data.alertsNotificationChannelCreate.notificationChannel != undefined) {
+                webhook_notification_channelid = data.alertsNotificationChannelCreate.notificationChannel.id;
+            }
+            console.log("webhook create: " + result + "  channel id: " + webhook_notification_channelid)
+            //   console.log("alert webhook setup " + result  + webhook_notification_channelid);
+        })
+
+    // **************************** END Webhook **********************/
+
+
+
+
+        /*************************** add notification channel to all policies **************/
+
+       // webhook_notification_channelid = "5727280";  // the id of the new wh channel we created.
+       // current_policies.push("1254689");
+       console.log("Applying webhook to each policly")
+        for(var pidx = 0 ; pidx < current_policies.length; pidx++ ) {
+
+            const targetpolid = current_policies[pidx];
+
+            var datapayload_addchannel = JSON.stringify({
+                query: `mutation ($accountidval: Int!, $channelidval: ID!, $policyidval: ID!) {
+            alertsNotificationChannelsAddToPolicy(accountId: $accountidval, notificationChannelIds: [$channelidval], policyId: $policyidval) {
+                 errors {
+                      description
+                      errorType
+                      notificationChannelId
+                    }
+                }
+             }`,
+                variables: {
+                    "accountidval": accountidval,
+                    "channelidval": webhook_notification_channelid,
+                    "policyidval": targetpolid
+                }
+            });
+
+            console.log("Attaching webhook to policy: " + targetpolid)
+            await dispatchToNewRelic(datapayload_addchannel, function (result, data) {
+                console.log("add channel to policy " + result);
+            })
+        }
 
 }
 
