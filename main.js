@@ -71,6 +71,15 @@ async function  dispatchToNewRelic(datapayload, callback)
         });
 }
 
+async function streamToFile (inputStream, filePath)  {
+    await new Promise((resolve, reject) => {
+        const fileWriteStream = fs.createWriteStream(filePath)
+        inputStream
+            .pipe(fileWriteStream)
+            .on('finish', resolve)
+            .on('error', reject)
+    })
+}
 
 async function  downloadTemplate(callback)
 {
@@ -83,7 +92,9 @@ async function  downloadTemplate(callback)
 
     await axios(config)
         .then(function (response) {
-            response.data.pipe(fs.createWriteStream(DB_TEMPLATE));
+
+            streamToFile(response.data, DB_TEMPLATE);
+          // response.data.pipe(fs.createWriteStream(DB_TEMPLATE));
             if (response.status == 200) {
                 if(response.data.errors != null)
                 {
@@ -110,7 +121,7 @@ async function customize_db()
     var fixedup = data.replace(/0000000/g, accountidval);
     customized_db = JSON.parse(fixedup);
     console.log("created custom dashboard with account: " + accountidval)
-    //console.log("cust_db" + JSON.stringify(customized_db));
+    console.log("cust_db" + JSON.stringify(customized_db));
 };
 
 
@@ -242,8 +253,6 @@ async function runner() {
 
         /*************************** add notification channel to all policies **************/
 
-       // webhook_notification_channelid = "5727280";  // the id of the new wh channel we created.
-       // current_policies.push("1254689");
        console.log("Applying webhook to each policly")
         for(var pidx = 0 ; pidx < current_policies.length; pidx++ ) {
 
