@@ -72,11 +72,16 @@ async function  dispatchToNewRelic(datapayload, callback)
 }
 
 async function streamToFile (inputStream, filePath)  {
-    await new Promise((resolve, reject) => {
-        const fileWriteStream = fs.createWriteStream(filePath)
-        inputStream
+
+    const fileWriteStream = fs.createWriteStream(filePath);
+
+     new Promise((resolve, reject) => {
+         inputStream
             .pipe(fileWriteStream)
-            .on('finish', resolve)
+            .on('finish', function(err){
+                var bla = 0;
+                bla = bla + 1;
+            })
             .on('error', reject)
     })
 }
@@ -90,12 +95,31 @@ async function  downloadTemplate(callback)
         responseType: "stream"
     };
 
+
     await axios(config)
         .then(function (response) {
 
-            streamToFile(response.data, DB_TEMPLATE);
-          // response.data.pipe(fs.createWriteStream(DB_TEMPLATE));
-            if (response.status == 200) {
+            let writer = fs.createWriteStream(DB_TEMPLATE)
+            // pipe the result stream into a file on disc
+            response.data.pipe(writer)
+
+         //  response.data.pipe(fs.createWriteStream(DB_TEMPLATE));
+
+            // return a promise and resolve when download finishes
+            return new Promise((resolve, reject) => {
+                writer.on('finish', () => {
+                    resolve(true)
+                    callback("success", response.data.data);
+                })
+
+                writer.on('error', (error) => {
+                    reject(error)
+                    callback("failed: " + JSON.stringify(response.data.errors), response.data.data);
+                })
+            })
+
+
+          /*  if (response.status == 200) {
                 if(response.data.errors != null)
                 {
                     callback("failed: " + JSON.stringify(response.data.errors), response.data.data);
@@ -105,7 +129,7 @@ async function  downloadTemplate(callback)
             }
             else {
                 callback("failed", undefined);
-            }
+            }  */
         })
         .catch(function (error) {
             callback("exception:" + error );
