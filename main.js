@@ -3,6 +3,7 @@ var API_KEY = undefined;
 var axios = require('axios');
 var fs = require('fs');
 var fsp = require('fs').promises;
+var gqlutils = require('./gqlutils')
 
 var current_policies = []
 var webhook_notification_channelid = "";  // the id of the new wh channel we created.
@@ -21,6 +22,7 @@ var customized_db = "";  // holder
 
 const options = commandLineArgs(optionDefinitions)
 
+// quick arguments check,  bomb out if not valid.
 if(options != undefined)
 {
     //validate here.
@@ -36,106 +38,11 @@ if(options != undefined)
     }
 }
 
-
+// set options passed in.
 accountidval = options.account;
 API_KEY = options.key;
 
-async function  dispatchToNewRelic(datapayload, callback)
-{
-    var config = {
-        method: 'post',
-        url: 'https://api.newrelic.com/graphql',
-        headers: {
-            'Content-Type': 'application/json',
-            'API-Key': API_KEY
-        },
-        data: datapayload
-    };
-
-    await axios(config)
-        .then(function (response) {
-            if (response.status == 200) {
-                if(response.data.errors != null)
-                {
-                    callback("failed: " + JSON.stringify(response.data.errors), response.data.data);
-                }
-                else
-                    callback("success", response.data.data);
-            }
-            else {
-                callback("failed", undefined);
-            }
-        })
-        .catch(function (error) {
-            callback("exception:" + error );
-        });
-}
-
-async function streamToFile (inputStream, filePath)  {
-
-    const fileWriteStream = fs.createWriteStream(filePath);
-
-     new Promise((resolve, reject) => {
-         inputStream
-            .pipe(fileWriteStream)
-            .on('finish', function(err){
-                var bla = 0;
-                bla = bla + 1;
-            })
-            .on('error', reject)
-    })
-}
-
-async function  downloadTemplate(callback)
-{
-
-    var config = {
-        method: 'get',
-        url: 'https://raw.githubusercontent.com/newrelic/oma-resource-center/main/src/content/docs/oma/value-drivers/uptime-performance-and-reliability/use-cases/alert-quality-management/alert-quality-management.json',
-        responseType: "stream"
-    };
-
-
-    await axios(config)
-        .then(function (response) {
-
-            let writer = fs.createWriteStream(DB_TEMPLATE)
-            // pipe the result stream into a file on disc
-            response.data.pipe(writer)
-
-         //  response.data.pipe(fs.createWriteStream(DB_TEMPLATE));
-
-            // return a promise and resolve when download finishes
-            return new Promise((resolve, reject) => {
-                writer.on('finish', () => {
-                    resolve(true)
-                    callback("success", response.data.data);
-                })
-
-                writer.on('error', (error) => {
-                    reject(error)
-                    callback("failed: " + JSON.stringify(response.data.errors), response.data.data);
-                })
-            })
-
-
-          /*  if (response.status == 200) {
-                if(response.data.errors != null)
-                {
-                    callback("failed: " + JSON.stringify(response.data.errors), response.data.data);
-                }
-                else
-                    callback("success", response.data.data);
-            }
-            else {
-                callback("failed", undefined);
-            }  */
-        })
-        .catch(function (error) {
-            callback("exception:" + error );
-        });
-}
-
+// function that reads in the template and replaces all the occurances of 000000 with account ID val
 async function customize_db()
 {
     // fixup the downloaded db template.. with account number
@@ -147,7 +54,6 @@ async function customize_db()
     console.log("created custom dashboard with account: " + accountidval)
     console.log("cust_db" + JSON.stringify(customized_db));
 };
-
 
 
 async function runner() {
@@ -166,7 +72,7 @@ async function runner() {
     }
 
     // download the template from git hub.
-    await downloadTemplate(function(result){
+    await gqlutils.downloadTemplate(function(result){
         console.log("dashboard template download: " + result);
         // if success,  else fail out.
     })
@@ -174,138 +80,31 @@ async function runner() {
     // customize the template.
     await customize_db();
 
-    console.log("Uploading dashboard to your account")
-    var datapayload2 = JSON.stringify({
-        query: `mutation ($accountidval: Int!, $dashboardval: DashboardInput!) {
-            dashboardCreate(accountId: $accountidval, dashboard: $dashboardval) {
-                    errors {
-                        description
-                    }
-                }
-             }`,
-        variables: { "accountidval": accountidval, "dashboardval": customized_db }
-    });
+    // add dashboard to the target account
+    await gqlutils.addDashboardToAccount(API_KEY, accountidval, customized_db);
 
-
-    await dispatchToNewRelic(datapayload2, function(result, data){
-        console.log("dashboard import result: " + result);
+    // get list of all the policies(ids) in an account
+    await gqlutils.getPolicyIDlist(API_KEY, accountidval,function(list) {
+        current_policies = list;
     })
 
-
-
-
-        //  *************** get policies ids ***************************************
-        var datapayload_getpolicys = JSON.stringify({
-            query: `query ($accountidval: Int!) {
-               actor {
-                   account(id: $accountidval) {
-                    alerts {
-                        policiesSearch {
-                            policies {
-                                id
-                                name
-                                incidentPreference
-                            }
-                        }
-                    }
-                    }
-                }
-             }`,
-            variables: { "accountidval": accountidval}
-        });
-
-        console.log("Fetching list of polcies in account: " + accountidval)
-        await dispatchToNewRelic(datapayload_getpolicys, function (result, data) {
-
-            if (data.actor.account.alerts.policiesSearch != undefined) {
-
-                for (var i = 0; i < data.actor.account.alerts.policiesSearch.policies.length; i++) {
-                    current_policies.push(data.actor.account.alerts.policiesSearch.policies[i].id)
-                }
-            }
-
-            console.log("get policies " + result + JSON.stringify(current_policies));
-        })
-
-
     // ******************************* create webhook *************************************
-
-        var wh1 = {
-            webhook: {
-                //  customPayloadType: JSON,
-                name: "AQM Events",
-                baseUrl: "https://insights-collector.newrelic.com/v1/accounts/"+ accountidval+"/events",
-                customHttpHeaders: [{name: "X-Insert-Key", value: API_KEY}],
-                customPayloadBody: '{ "eventType":"nrAQMIncident", "account_id": "$ACCOUNT_ID", "account_name" : "$ACCOUNT_NAME", "closed_violations_count_critical": "$CLOSED_VIOLATIONS_COUNT_CRITICAL",  "closed_violations_count_warning": "$CLOSED_VIOLATIONS_COUNT_WARNING" }',
-                customPayloadType: 'JSON'
-            }
+    var wh1 = {
+        webhook: {
+            //  customPayloadType: JSON,
+            name: "AQM Events",
+            baseUrl: "https://insights-collector.newrelic.com/v1/accounts/"+ accountidval+"/events",
+            customHttpHeaders: [{name: "X-Insert-Key", value: API_KEY}],
+            customPayloadBody: '{ "eventType":"nrAQMIncident", "account_id": "$ACCOUNT_ID", "account_name" : "$ACCOUNT_NAME", "closed_violations_count_critical": "$CLOSED_VIOLATIONS_COUNT_CRITICAL",  "closed_violations_count_warning": "$CLOSED_VIOLATIONS_COUNT_WARNING" }',
+            customPayloadType: 'JSON'
         }
+    }
+    await  gqlutils.createAQMWebhook(API_KEY, accountidval, wh1, function(wh_id) {
+        webhook_notification_channelid = wh_id;
+    })
 
-        var datapayload_alertwebhook = JSON.stringify({
-            query: `mutation ($accountidval: Int!, $alertchannel: AlertsNotificationChannelCreateConfiguration!) {
-            alertsNotificationChannelCreate(accountId: $accountidval, notificationChannel: $alertchannel) {
-                    notificationChannel {
-                    ... on AlertsWebhookNotificationChannel {
-                        id
-                    name
-                      }
-                    }
-
-                    error {
-                        description
-                        errorType
-
-                    }
-                }
-             }`,
-            variables: {"accountidval": accountidval, "alertchannel": wh1}
-        });
-
-        console.log("Creating webhook in account: " + accountidval)
-        await dispatchToNewRelic(datapayload_alertwebhook, function (result, data) {
-            if (data.alertsNotificationChannelCreate.notificationChannel != undefined) {
-                webhook_notification_channelid = data.alertsNotificationChannelCreate.notificationChannel.id;
-            }
-            console.log("webhook create: " + result + "  channel id: " + webhook_notification_channelid)
-            //   console.log("alert webhook setup " + result  + webhook_notification_channelid);
-        })
-
-    // **************************** END Webhook **********************/
-
-
-
-
-        /*************************** add notification channel to all policies **************/
-
-       console.log("Applying webhook to each policly")
-        for(var pidx = 0 ; pidx < current_policies.length; pidx++ ) {
-
-            const targetpolid = current_policies[pidx];
-
-            var datapayload_addchannel = JSON.stringify({
-                query: `mutation ($accountidval: Int!, $channelidval: ID!, $policyidval: ID!) {
-            alertsNotificationChannelsAddToPolicy(accountId: $accountidval, notificationChannelIds: [$channelidval], policyId: $policyidval) {
-                 errors {
-                      description
-                      errorType
-                      notificationChannelId
-                    }
-                }
-             }`,
-                variables: {
-                    "accountidval": accountidval,
-                    "channelidval": webhook_notification_channelid,
-                    "policyidval": targetpolid
-                }
-            });
-
-            console.log("Attaching webhook to policy: " + targetpolid)
-            await dispatchToNewRelic(datapayload_addchannel, function (result, data) {
-                console.log("add channel to policy " + result);
-            })
-        }
-
+    // add notification channel to all policies
+    await gqlutils.addWebHookToPolicyList(API_KEY, accountidval, webhook_notification_channelid, current_policies);
 }
-
 
 runner();
