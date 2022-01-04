@@ -6,14 +6,17 @@
   "subaccounts": [
     {
       "name": "1",
+      "account_id": 34343,
       "api_key": ""
     },
     {
       "name": "2",
+      "account_id": 34341,
       "api_key": ""
     },
     {
       "name": "3",
+      "account_id": 343343,
       "api_key": ""
     }
   ]
