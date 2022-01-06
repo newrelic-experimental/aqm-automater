@@ -107,7 +107,7 @@ async function mastersub_runner() {
     }
 
     // add the webhook to the master account
-
+    console.log("Applying webhook to master account in cfg file")
     // 1. get list of all the policies(ids) in master account
     await gqlutils.getPolicyIDlist(master_sub_cfg.masteraccount.api_key, master_sub_cfg.masteraccount.account_id,function(list) {
         current_policies = list;
@@ -121,6 +121,8 @@ async function mastersub_runner() {
     // add notification channel to all policies in the master account, using the webhooks channel id,
     await gqlutils.addWebHookToPolicyList(master_sub_cfg.masteraccount.api_key, master_sub_cfg.masteraccount.account_id, webhook_notification_channelid, current_policies);
 
+    console.log("Done with master account")
+
 
     // For each sub account in the config,  add the same webhook defined above.
 
@@ -130,7 +132,7 @@ async function mastersub_runner() {
         var subaccount = master_sub_cfg.subaccounts[i];
         sub_account_id = subaccount.account_id;
         sub_account_api_key = subaccount.api_key;
-        console.log("sub account: " + sub_account_id)
+        console.log("applying to sub account: " + sub_account_id)
 
         // get list of all the policies(ids) in an account
         await gqlutils.getPolicyIDlist(sub_account_api_key, sub_account_id,function(list) {
