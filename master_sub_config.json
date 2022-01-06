@@ -1,6 +1,6 @@
 {
   "masteraccount": {
-    "account_id": "<master_accountid>",
+    "account_id": 112121,
     "api_key": " <api key> "
   },
   "subaccounts": [

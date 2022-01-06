@@ -1,5 +1,3 @@
-var accountidval = undefined;
-var API_KEY = undefined;
 var fs = require('fs');
 var fsp = require('fs').promises;
 var gqlutils = require('./gqlutils')
@@ -10,8 +8,7 @@ const commandLineArgs = require('command-line-args')
 
 const DB_TEMPLATE = './alert-quality-mgt-template.json';
 const optionDefinitions = [
-    { name: 'key', alias: 'k', type: String },
-    { name: 'account', alias: 'a', type: Number }
+    { name: 'config', alias: 'c', type: String },
 ]
 
 var customized_db = "";  // holder
@@ -25,21 +22,16 @@ const options = commandLineArgs(optionDefinitions)
 if(options != undefined)
 {
     //validate here.
-    if(options.account == undefined)
+    if(options.config == undefined)
     {
-        console.log("error, no account number ")
-        return
-    }
-    if(options.key == undefined)
-    {
-        console.log("error, no key number ")
+        console.log("error, no config ")
         return
     }
 }
 
 // set options passed in.
-accountidval = options.account;
-API_KEY = options.key;
+cfgpath = options.config;
+
 
 // Simple Case -- cli one account
 // function that reads in the template and replaces all the occurances of 000000 with account ID val
@@ -56,75 +48,19 @@ async function customize_db(accountidval)
 };
 
 
-async function runner() {
-
-    // *************************** dashboard start, ********************************************
-    // check if old template file exissts... remove it if so, we want the latest one.
-    if(fs.existsSync(DB_TEMPLATE))
-    {
-        console.log("removing pre-existing template file if present")
-        fs.unlink(DB_TEMPLATE, (err) => {
-            if (err) {
-                console.error(err)
-            }
-            console.log("File removed")
-        })
-    }
-
-    // download the template from git hub.
-    await gqlutils.downloadTemplate(function(result){
-        console.log("dashboard template download: " + result);
-        // if success,  else fail out.
-    })
-
-    // customize the template.
-    await customize_db(accountidval);
-
-    // add dashboard to the target account
-    await gqlutils.addDashboardToAccount(API_KEY, accountidval, customized_db);
-
-    // get list of all the policies(ids) in an account
-    await gqlutils.getPolicyIDlist(API_KEY, accountidval,function(list) {
-        current_policies = list;
-    })
-
-    // ******************************* create webhook *************************************
-    var wh1 = {
-        webhook: {
-            //  customPayloadType: JSON,
-            name: "AQM Events",
-            baseUrl: "https://insights-collector.newrelic.com/v1/accounts/"+ accountidval+"/events",
-            customHttpHeaders: [{name: "X-Insert-Key", value: API_KEY}],
-            customPayloadBody: '{ "eventType":"nrAQMIncident", "account_id": "$ACCOUNT_ID", "account_name" : "$ACCOUNT_NAME", "closed_violations_count_critical": "$CLOSED_VIOLATIONS_COUNT_CRITICAL",  "closed_violations_count_warning": "$CLOSED_VIOLATIONS_COUNT_WARNING" }',
-            customPayloadType: 'JSON'
-        }
-    }
-    await  gqlutils.createAQMWebhook(API_KEY, accountidval, wh1, function(wh_id) {
-        webhook_notification_channelid = wh_id;
-    })
-
-    // add notification channel to all policies
-    await gqlutils.addWebHookToPolicyList(API_KEY, accountidval, webhook_notification_channelid, current_policies);
-}
-
-runner();
-
-
 // ************************************** Master Sub case ****************************************
 
-async function parseMasterSubConfig(filepath)
+async function parseMasterSubConfig(filepath, callback)
 {
     // fixup the downloaded db template.. with account number
     console.log('Reading Master / Sub Config')
     const data = await fsp.readFile(filepath, 'utf8');  // note this is using the promises version.
-    varmaster_sub_cfg = JSON.parse(data);
-    return master_sub_cfg;
+    var cfg = JSON.parse(data);
+    callback(cfg);
 };
 
 
-
-
-var master_sub_cfg = undefined;
+var master_sub_cfg = undefined; //obj used to hold parsed master/cfg file.
 
 async function mastersub_runner() {
 
@@ -147,9 +83,9 @@ async function mastersub_runner() {
         // if success,  else fail out.
     })
 
-
-    master_sub_cfg = parseMasterSubConfig(cfgpath);
-
+    await parseMasterSubConfig(cfgpath, function(mastercfgobj){
+        master_sub_cfg = mastercfgobj;
+    });
 
     // customize the template.
     await customize_db(master_sub_cfg.masteraccount.account_id);  // customize with the account id from the master account
@@ -170,6 +106,8 @@ async function mastersub_runner() {
         }
     }
 
+    // may need to add in master?,  not sure..
+
 
     // For  each sub account defined,
     console.log("Applying webhook to all subaccounts in cfg file")
@@ -178,12 +116,14 @@ async function mastersub_runner() {
         var subaccount = master_sub_cfg.subaccounts[i];
         sub_account_id = subaccount.account_id;
         sub_account_api_key = subaccount.api_key;
+        console.log("sub account: " + sub_account_id)
 
         // get list of all the policies(ids) in an account
         await gqlutils.getPolicyIDlist(sub_account_api_key, sub_account_id,function(list) {
             current_policies = list;
         })
 
+        // create webhook, in the sub account, but using the wh defined above(wh1) which reports to the master.
         await  gqlutils.createAQMWebhook(sub_account_api_key, sub_account_id, wh1, function(wh_id) {
             webhook_notification_channelid = wh_id;
         })
@@ -192,7 +132,6 @@ async function mastersub_runner() {
         await gqlutils.addWebHookToPolicyList(sub_account_api_key, sub_account_id, webhook_notification_channelid, current_policies);
     }
 
-
-
-
 }
+
+mastersub_runner(); // run it,
