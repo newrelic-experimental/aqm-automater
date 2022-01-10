@@ -45,7 +45,7 @@ async function customize_db(accountidval)
     var fixedup = data.replace(/0000000/g, accountidval);
     customized_db = JSON.parse(fixedup);
     console.log("created custom dashboard with account: " + accountidval)
-    console.log("cust_db" + JSON.stringify(customized_db));
+   // console.log("cust_db" + JSON.stringify(customized_db));
 };
 
 
