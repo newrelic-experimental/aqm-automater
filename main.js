@@ -1,5 +1,9 @@
 var accountidval = undefined;
 var API_KEY = undefined;
+var mycookie = undefined;
+
+var cfgpath = undefined;
+var configobj = undefined; //obj used to hold parsed cfg file.
 var fs = require('fs');
 var fsp = require('fs').promises;
 var gqlutils = require('./gqlutils')
@@ -10,14 +14,10 @@ const commandLineArgs = require('command-line-args')
 
 const DB_TEMPLATE = './alert-quality-mgt-template.json';
 const optionDefinitions = [
-    { name: 'key', alias: 'k', type: String },
-    { name: 'account', alias: 'a', type: Number }
+    { name: 'config', alias: 'c', type: String }
 ]
 
 var customized_db = "";  // holder
-// args are account number (rpm id)   -a
-// key  -k
-// both must be present. so we need 4 arguments total.
 
 const options = commandLineArgs(optionDefinitions)
 
@@ -25,21 +25,14 @@ const options = commandLineArgs(optionDefinitions)
 if(options != undefined)
 {
     //validate here.
-    if(options.account == undefined)
+    if(options.config == undefined)
     {
-        console.log("error, no account number ")
-        return
-    }
-    if(options.key == undefined)
-    {
-        console.log("error, no key number ")
+        console.log("error, no config file specified")
         return
     }
 }
 
-// set options passed in.
-accountidval = options.account;
-API_KEY = options.key;
+cfgpath = options.config;
 
 // Simple Case -- cli one account
 // function that reads in the template and replaces all the occurances of 000000 with account ID val
@@ -55,6 +48,15 @@ async function customize_db(accountidval)
     console.log("cust_db" + JSON.stringify(customized_db));
 };
 
+
+async function parseConfig(filepath, callback)
+{
+    // fixup the downloaded db template.. with account number
+    console.log('Reading Config File')
+    const data = await fsp.readFile(filepath, 'utf8');  // note this is using the promises version.
+    var cfg = JSON.parse(data);
+    callback(cfg);
+};
 
 async function runner() {
 
@@ -77,6 +79,17 @@ async function runner() {
         // if success,  else fail out.
     })
 
+
+    await parseConfig(cfgpath, function(cfgobj){
+        configobj = cfgobj;
+        accountidval = configobj.account.account_id;
+        API_KEY = configobj.account.api_key; //options.key;
+        mycookie = configobj.account.cookie;
+    });
+
+
+    gqlutils.setAuthCookie(mycookie);
+
     // customize the template.
     await customize_db(accountidval);
 
@@ -89,6 +102,7 @@ async function runner() {
     })
 
     // ******************************* create webhook *************************************
+    console.log("Building Webhook body")
     var wh1 = {
         webhook: {
             //  customPayloadType: JSON,
