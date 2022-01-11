@@ -98,17 +98,10 @@ async function mastersub_runner() {
 
 
     // ******************************* create webhook *************************************  using master api key and account id
-    var wh1 = {
-        webhook: {
-            //  customPayloadType: JSON,
-            name: "AQM Events",
-            baseUrl: "https://insights-collector.newrelic.com/v1/accounts/"+ master_sub_cfg.masteraccount.account_id+"/events",
-            customHttpHeaders: [{name: "X-Insert-Key", value: master_sub_cfg.masteraccount.api_key}],
-            customPayloadBody: '{ "eventType":"nrAQMIncident", "account_id": "$ACCOUNT_ID", "account_name" : "$ACCOUNT_NAME", "closed_violations_count_critical": "$CLOSED_VIOLATIONS_COUNT_CRITICAL",  "closed_violations_count_warning": "$CLOSED_VIOLATIONS_COUNT_WARNING" }',
-            customPayloadType: 'JSON'
-        }
-    }
 
+    console.log("Building Webhook body")
+    var wh1 = gqlutils.constructWebHook(master_sub_cfg.masteraccount.account_id, master_sub_cfg.masteraccount.api_key);
+    
     // add the webhook to the master account
     console.log("Applying webhook to master account in cfg file")
     // 1. get list of all the policies(ids) in master account

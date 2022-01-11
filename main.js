@@ -103,16 +103,8 @@ async function runner() {
 
     // ******************************* create webhook *************************************
     console.log("Building Webhook body")
-    var wh1 = {
-        webhook: {
-            //  customPayloadType: JSON,
-            name: "AQM Events",
-            baseUrl: "https://insights-collector.newrelic.com/v1/accounts/"+ accountidval+"/events",
-            customHttpHeaders: [{name: "X-Insert-Key", value: API_KEY}],
-            customPayloadBody: '{ "eventType":"nrAQMIncident", "account_id": "$ACCOUNT_ID", "account_name" : "$ACCOUNT_NAME", "closed_violations_count_critical": "$CLOSED_VIOLATIONS_COUNT_CRITICAL",  "closed_violations_count_warning": "$CLOSED_VIOLATIONS_COUNT_WARNING" }',
-            customPayloadType: 'JSON'
-        }
-    }
+    var wh1 = gqlutils.constructWebHook(accountidval, API_KEY);
+
     await  gqlutils.createAQMWebhook(API_KEY, accountidval, wh1, function(wh_id) {
         webhook_notification_channelid = wh_id;
     })

@@ -48,6 +48,23 @@ var utils = module.exports = {
      {
          mycookie = cookie;
      },
+     constructWebHook: function(accountnumber, api_key)
+     {
+         var wh_body = '{"eventType":"nrAQMIncident","account_id": "$ACCOUNT_ID","account_name": "$ACCOUNT_NAME","closed_violations_count_critical": "$CLOSED_VIOLATIONS_COUNT_CRITICAL","closed_violations_count_warning": "$CLOSED_VIOLATIONS_COUNT_WARNING","condition_description": "$DESCRIPTION","condition_family_id": "$CONDITION_FAMILY_ID","condition_name": "$CONDITION_NAME","current_state": "$EVENT_STATE", "details": "$EVENT_DETAILS", "duration": "$DURATION", "event_type": "$EVENT_TYPE", "incident_acknowledge_url": "$INCIDENT_ACKNOWLEDGE_URL", "incident_id": "$INCIDENT_ID", "incident_url": "$INCIDENT_URL", "metadata": "$METADATA", "open_violations_count_critical": "$OPEN_VIOLATIONS_COUNT_CRITICAL", "open_violations_count_warning": "$OPEN_VIOLATIONS_COUNT_WARNING", "owner": "$EVENT_OWNER", "policy_name": "$POLICY_NAME", "policy_url": "$POLICY_URL", "runbook_url": "$RUNBOOK_URL", "severity": "$SEVERITY", "targets": "$TARGETS", "timestamp": "$TIMESTAMP", "timestamp_utc_string": "$TIMESTAMP_UTC_STRING", "violation_callback_url": "$VIOLATION_CALLBACK_URL", "violation_chart_url": "$VIOLATION_CHART_URL"}';
+
+         var wh1 = {
+             webhook: {
+                 name: "AQM Events",
+                 baseUrl: "https://insights-collector.newrelic.com/v1/accounts/"+ accountnumber+"/events",
+                 customHttpHeaders: [{name: "X-Insert-Key", value: api_key}],
+                 customPayloadBody: wh_body,
+                 customPayloadType: 'JSON'
+             }
+         }
+
+         return wh1;
+
+     },
      downloadTemplate: async function(callback) {
 
         var config = {
