@@ -15,22 +15,37 @@
 > 3.  Association of the notification channel with ALL of your accounts Alert policies. 
 
 ## Usage
-> you need a newrelic account number and an user api key from that account to use this script. 
+##### Single Account: node main.js -c yourconfig.json 
+>
+For single accounts, use the example config_single_account.json template for you config.
+>
+config file details:
+ - account_id(required):  target account number
+ 
+ - api_key(required): either NR user key OR NR insights insert key
+ >>  NR user key  will provide both authorization for the requests as well as the webhook auth. 
+ >>  Insight insert key will only be used for webhook, so you must provide a cooke(see below)
+ 
+ - cookie: NR admin cookie(from gql request header via browser).  Please make sure that all internal quotes in cookie string are escaped
+ 
+>
 > 
-> node main.js --account "your newrelic acount number"  --key "your newrelic user api key"
+##### Master / Sub Account: node master_sub_main.js -c yourconfig.json
+>
+For master/sub accounts, use the example config_master_sub.json template for you config.
+>
+>
 > 
 
 ## Building
 
-
-## Testing
+before running the script install the required modules :   npm install
 
 
 ## Support
 
 New Relic hosts and moderates an online forum where customers can interact with New Relic employees as well as other customers to get help and share best practices. Like all official New Relic open source projects, there's a related Community topic in the New Relic Explorers Hub. You can find this project's topic/threads here:
 
->Add the url for the support thread here
 
 ## Contributing
 We encourage your contributions to improve aqm-automater ! Keep in mind when you submit your pull request, you'll need to sign the CLA via the click-through using CLA-Assistant. You only have to sign the CLA one time per project.

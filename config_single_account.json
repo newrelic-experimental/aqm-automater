@@ -1,0 +1,7 @@
+{
+  "account": {
+    "account_id": "account number",
+    "api_key": "user or insights api key here. ",
+    "cookie": "NR adming cookie (optional)"
+  }
+}
