@@ -1,7 +1,8 @@
 {
   "masteraccount": {
     "account_id": 112121,
-    "api_key": " <api key> "
+    "api_key": " <api key> ",
+    "cookie": "NR adming cookie (optional)"
   },
   "subaccounts": [
     {

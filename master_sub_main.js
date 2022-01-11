@@ -59,7 +59,7 @@ async function parseMasterSubConfig(filepath, callback)
     callback(cfg);
 };
 
-
+var mycookie = undefined;
 var master_sub_cfg = undefined; //obj used to hold parsed master/cfg file.
 
 async function mastersub_runner() {
@@ -85,7 +85,10 @@ async function mastersub_runner() {
 
     await parseMasterSubConfig(cfgpath, function(mastercfgobj){
         master_sub_cfg = mastercfgobj;
+        mycookie = configobj.account.cookie;
     });
+
+    gqlutils.setAuthCookie(mycookie);
 
     // customize the template.
     await customize_db(master_sub_cfg.masteraccount.account_id);  // customize with the account id from the master account
