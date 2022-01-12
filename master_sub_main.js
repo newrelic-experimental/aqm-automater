@@ -49,7 +49,7 @@ async function customize_db(accountidval)
 
 
 // ************************************** Master Sub case ****************************************
-
+/*
 async function parseMasterSubConfig(filepath, callback)
 {
     // fixup the downloaded db template.. with account number
@@ -58,6 +58,8 @@ async function parseMasterSubConfig(filepath, callback)
     var cfg = JSON.parse(data);
     callback(cfg);
 };
+*/
+
 
 var mycookie = undefined;
 var master_sub_cfg = undefined; //obj used to hold parsed master/cfg file.
@@ -83,10 +85,16 @@ async function mastersub_runner() {
         // if success,  else fail out.
     })
 
-    await parseMasterSubConfig(cfgpath, function(mastercfgobj){
-        master_sub_cfg = mastercfgobj;
+    
+    await gqlutils.parseConfig(cfgpath, function(cfgobj){
+        master_sub_cfg = cfgobj;
         mycookie = configobj.account.cookie;
     });
+
+   // await parseMasterSubConfig(cfgpath, function(mastercfgobj){
+   //     master_sub_cfg = mastercfgobj;
+   //     mycookie = configobj.account.cookie;
+   // });
 
     gqlutils.setAuthCookie(mycookie);
 
@@ -101,7 +109,7 @@ async function mastersub_runner() {
 
     console.log("Building Webhook body")
     var wh1 = gqlutils.constructWebHook(master_sub_cfg.masteraccount.account_id, master_sub_cfg.masteraccount.api_key);
-    
+
     // add the webhook to the master account
     console.log("Applying webhook to master account in cfg file")
     // 1. get list of all the policies(ids) in master account

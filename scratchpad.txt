@@ -1,0 +1,265 @@
+
+/*
+async function  downloadTemplate(callback)
+{
+
+    var config = {
+        method: 'get',
+        url: 'https://raw.githubusercontent.com/newrelic/oma-resource-center/main/src/content/docs/oma/value-drivers/uptime-performance-and-reliability/use-cases/alert-quality-management/alert-quality-management.json',
+        responseType: "stream"
+    };
+
+
+    await axios(config)
+        .then(function (response) {
+
+            let writer = fs.createWriteStream(DB_TEMPLATE)
+            // pipe the result stream into a file on disc
+            response.data.pipe(writer)
+
+         //  response.data.pipe(fs.createWriteStream(DB_TEMPLATE));
+
+            // return a promise and resolve when download finishes
+            return new Promise((resolve, reject) => {
+                writer.on('finish', () => {
+                    resolve(true)
+                    callback("success", response.data.data);
+                })
+
+                writer.on('error', (error) => {
+                    reject(error)
+                    callback("failed: " + JSON.stringify(response.data.errors), response.data.data);
+                })
+            })
+
+
+          /*  if (response.status == 200) {
+                if(response.data.errors != null)
+                {
+                    callback("failed: " + JSON.stringify(response.data.errors), response.data.data);
+                }
+                else
+                    callback("success", response.data.data);
+            }
+            else {
+                callback("failed", undefined);
+            }  */
+      /*  })
+        .catch(function (error) {
+            callback("exception:" + error );
+        });
+}
+*/
+
+
+/*
+async function  dispatchToNewRelic(datapayload, callback)
+{
+    var config = {
+        method: 'post',
+        url: 'https://api.newrelic.com/graphql',
+        headers: {
+            'Content-Type': 'application/json',
+            'API-Key': API_KEY
+        },
+        data: datapayload
+    };
+
+    await axios(config)
+        .then(function (response) {
+            if (response.status == 200) {
+                if(response.data.errors != null)
+                {
+                    callback("failed: " + JSON.stringify(response.data.errors), response.data.data);
+                }
+                else
+                    callback("success", response.data.data);
+            }
+            else {
+                callback("failed", undefined);
+            }
+        })
+        .catch(function (error) {
+            callback("exception:" + error );
+        });
+}
+
+ */
+
+ /*
+ async function streamToFile (inputStream, filePath)  {
+
+     const fileWriteStream = fs.createWriteStream(filePath);
+
+      new Promise((resolve, reject) => {
+          inputStream
+             .pipe(fileWriteStream)
+             .on('finish', function(err){
+                 var bla = 0;
+                 bla = bla + 1;
+             })
+             .on('error', reject)
+     })
+ }
+ */
+
+ /*
+     console.log("Uploading dashboard to your account")
+     var datapayload2 = JSON.stringify({
+         query: `mutation ($accountidval: Int!, $dashboardval: DashboardInput!) {
+             dashboardCreate(accountId: $accountidval, dashboard: $dashboardval) {
+                     errors {
+                         description
+                     }
+                 }
+              }`,
+         variables: { "accountidval": accountidval, "dashboardval": customized_db }
+     });
+
+
+     await gqlutils.dispatchToNewRelic(API_KEY, datapayload2, function(result, data){
+         console.log("dashboard import result: " + result);
+     })
+
+     */
+
+      /*
+             //  *************** get policies ids ***************************************
+             var datapayload_getpolicys = JSON.stringify({
+                 query: `query ($accountidval: Int!) {
+                    actor {
+                        account(id: $accountidval) {
+                         alerts {
+                             policiesSearch {
+                                 policies {
+                                     id
+                                     name
+                                     incidentPreference
+                                 }
+                             }
+                         }
+                         }
+                     }
+                  }`,
+                 variables: { "accountidval": accountidval}
+             });
+
+             console.log("Fetching list of polcies in account: " + accountidval)
+             await gqlutils.dispatchToNewRelic(API_KEY, datapayload_getpolicys, function (result, data) {
+
+                 if (data.actor.account.alerts.policiesSearch != undefined) {
+
+                     for (var i = 0; i < data.actor.account.alerts.policiesSearch.policies.length; i++) {
+                         current_policies.push(data.actor.account.alerts.policiesSearch.policies[i].id)
+                     }
+                 }
+
+                 console.log("get policies " + result + JSON.stringify(current_policies));
+             })
+
+                  *
+
+
+                   /*
+                              var datapayload_alertwebhook = JSON.stringify({
+                                  query: `mutation ($accountidval: Int!, $alertchannel: AlertsNotificationChannelCreateConfiguration!) {
+                                  alertsNotificationChannelCreate(accountId: $accountidval, notificationChannel: $alertchannel) {
+                                          notificationChannel {
+                                          ... on AlertsWebhookNotificationChannel {
+                                              id
+                                          name
+                                            }
+                                          }
+
+                                          error {
+                                              description
+                                              errorType
+
+                                          }
+                                      }
+                                   }`,
+                                  variables: {"accountidval": accountidval, "alertchannel": wh1}
+                              });
+
+                              console.log("Creating webhook in account: " + accountidval)
+                              await gqlutils.dispatchToNewRelic(API_KEY, datapayload_alertwebhook, function (result, data) {
+                                  if (data.alertsNotificationChannelCreate.notificationChannel != undefined) {
+                                      webhook_notification_channelid = data.alertsNotificationChannelCreate.notificationChannel.id;
+                                  }
+                                  console.log("webhook create: " + result + "  channel id: " + webhook_notification_channelid)
+                                  //   console.log("alert webhook setup " + result  + webhook_notification_channelid);
+                              })
+                      *//
+
+
+
+                      /* console.log("Applying webhook to each policly")
+                          for(var pidx = 0 ; pidx < current_policies.length; pidx++ ) {
+
+                              const targetpolid = current_policies[pidx];
+
+                              var datapayload_addchannel = JSON.stringify({
+                                  query: `mutation ($accountidval: Int!, $channelidval: ID!, $policyidval: ID!) {
+                                  alertsNotificationChannelsAddToPolicy(accountId: $accountidval, notificationChannelIds: [$channelidval], policyId: $policyidval) {
+                                       errors {
+                                            description
+                                            errorType
+                                            notificationChannelId
+                                          }
+                                      }
+                                   }`,
+                                  variables: {
+                                      "accountidval": accountidval,
+                                      "channelidval": webhook_notification_channelid,
+                                      "policyidval": targetpolid
+                                  }
+                              });
+
+                              console.log("Attaching webhook to policy: " + targetpolid)
+                              await gqlutils.dispatchToNewRelic(API_KEY, datapayload_addchannel, function (result, data) {
+                                  console.log("add channel to policy " + result);
+                              })
+                          }  */
+
+
+
+
+
+                          /*
+                          async function dispatchToNewRelic(api_key, datapayload, callback)
+                          {
+                              //if(mycookie != undefined)
+                                  await dispatchNRusingCookie(api_key, datapayload, callback);  // use cookie via node-fetch
+                            /*  else
+                              {
+                                  var url_cust = 'https://api.newrelic.com/graphql';
+
+                                  var config = {
+                                      method: 'post',
+                                      url: url_cust,
+                                      headers: {
+                                          'Content-Type': 'application/json',
+                                          'API-Key': api_key,
+                                      },
+                                      data: datapayload,
+                                  };
+
+                                  await axios(config)
+                                      .then(function (response) {
+                                          if (response.status == 200) {
+                                              if(response.data.errors != null)
+                                              {
+                                                  callback("failed: " + JSON.stringify(response.data.errors), response.data.data);
+                                              }
+                                              else
+                                                  callback("success", response.data.data);
+                                          }
+                                          else {
+                                              callback("failed", undefined);
+                                          }
+                                      })
+                                      .catch(function (error) {
+                                          callback("exception:" + error );
+                                      });
+                              }*/
+                          //}

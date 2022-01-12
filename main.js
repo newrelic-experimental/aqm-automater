@@ -49,15 +49,6 @@ async function customize_db(accountidval)
 };
 
 
-async function parseConfig(filepath, callback)
-{
-    // fixup the downloaded db template.. with account number
-    console.log('Reading Config File')
-    const data = await fsp.readFile(filepath, 'utf8');  // note this is using the promises version.
-    var cfg = JSON.parse(data);
-    callback(cfg);
-};
-
 async function runner() {
 
     // *************************** dashboard start, ********************************************
@@ -80,7 +71,7 @@ async function runner() {
     })
 
 
-    await parseConfig(cfgpath, function(cfgobj){
+    await gqlutils.parseConfig(cfgpath, function(cfgobj){
         configobj = cfgobj;
         accountidval = configobj.account.account_id;
         API_KEY = configobj.account.api_key; //options.key;

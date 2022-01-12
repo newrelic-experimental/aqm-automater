@@ -65,6 +65,32 @@ var utils = module.exports = {
          return wh1;
 
      },
+    parseConfig: async function (filepath, callback)
+    {
+        // fixup the downloaded db template.. with account number
+        console.log('Reading Config File')
+        const data = await fsp.readFile(filepath, 'utf8');  // note this is using the promises version.
+
+        // cleanup the double quotes
+        const usingSplit = data.split(''); //convert to array.
+        var start = data.indexOf('cookie'); // find search start
+        var endstop = data.lastIndexOf("\"");  //find the last quote,
+        var quotecnt = 0;
+        for (var i = start+10; i < endstop; i++) {
+
+            if(usingSplit[i] == "\"" && usingSplit[i-1] != "\\")  // if we find a quote, and there is no \ at the prev index...
+            {
+                usingSplit.splice(i,0,"\\"); // insert \
+                quotecnt++;
+                endstop++; // every time we add a char, inc the last index.
+                i++;
+            }
+        }
+        console.log("quote count: "+ quotecnt);
+        var fixedup = usingSplit.join("");  // convert array back to string
+        var cfg = JSON.parse(fixedup);
+        callback(cfg);
+    },
      downloadTemplate: async function(callback) {
 
         var config = {
