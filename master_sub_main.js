@@ -85,7 +85,7 @@ async function mastersub_runner() {
         // if success,  else fail out.
     })
 
-    
+
     await gqlutils.parseConfig(cfgpath, function(cfgobj){
         master_sub_cfg = cfgobj;
         mycookie = configobj.account.cookie;
