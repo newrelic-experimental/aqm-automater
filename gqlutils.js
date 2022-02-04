@@ -89,6 +89,16 @@ var utils = module.exports = {
         console.log("quote count: "+ quotecnt);
         var fixedup = usingSplit.join("");  // convert array back to string
         var cfg = JSON.parse(fixedup);
+
+        // add check for account number is int
+       // if(cfg.account_id != undefined)
+        //{
+        //    if(typeof cfg.account_id === 'string')
+         //   {
+          //      cfg.account_id = parseInt(cfg.account_id);
+           //     console.log("bad account number has quotes, converted to int")
+           // }
+       // }
         callback(cfg);
     },
      downloadTemplate: async function(callback) {

@@ -99,31 +99,31 @@ async function mastersub_runner() {
     gqlutils.setAuthCookie(mycookie);
 
     // customize the template.
-    await customize_db(master_sub_cfg.masteraccount.account_id);  // customize with the account id from the master account
+    await customize_db(parseInt(master_sub_cfg.masteraccount.account_id));  // customize with the account id from the master account
 
     // add dashboard to the target account
-    await gqlutils.addDashboardToAccount(master_sub_cfg.masteraccount.api_key, master_sub_cfg.masteraccount.account_id, customized_db);  // send dashboard to master account, with master account id val
+    await gqlutils.addDashboardToAccount(master_sub_cfg.masteraccount.api_key, parseInt(master_sub_cfg.masteraccount.account_id), customized_db);  // send dashboard to master account, with master account id val
 
 
     // ******************************* create webhook *************************************  using master api key and account id
 
     console.log("Building Webhook body")
-    var wh1 = gqlutils.constructWebHook(master_sub_cfg.masteraccount.account_id, master_sub_cfg.masteraccount.api_key);
+    var wh1 = gqlutils.constructWebHook(parseInt(master_sub_cfg.masteraccount.account_id), master_sub_cfg.masteraccount.api_key);
 
     // add the webhook to the master account
     console.log("Applying webhook to master account in cfg file")
     // 1. get list of all the policies(ids) in master account
-    await gqlutils.getPolicyIDlist(master_sub_cfg.masteraccount.api_key, master_sub_cfg.masteraccount.account_id,function(list) {
+    await gqlutils.getPolicyIDlist(master_sub_cfg.masteraccount.api_key, parseInt(master_sub_cfg.masteraccount.account_id),function(list) {
         current_policies = list;
     })
 
     // create webhook,in master account, store the channel id of the webhhook
-    await  gqlutils.createAQMWebhook(master_sub_cfg.masteraccount.api_key, master_sub_cfg.masteraccount.account_id, wh1, function(wh_id) {
+    await  gqlutils.createAQMWebhook(master_sub_cfg.masteraccount.api_key, parseInt(master_sub_cfg.masteraccount.account_id), wh1, function(wh_id) {
         webhook_notification_channelid = wh_id;
     })
 
     // add notification channel to all policies in the master account, using the webhooks channel id,
-    await gqlutils.addWebHookToPolicyList(master_sub_cfg.masteraccount.api_key, master_sub_cfg.masteraccount.account_id, webhook_notification_channelid, current_policies);
+    await gqlutils.addWebHookToPolicyList(master_sub_cfg.masteraccount.api_key, parseInt(master_sub_cfg.masteraccount.account_id), webhook_notification_channelid, current_policies);
 
     console.log("Done with master account")
 
@@ -134,7 +134,7 @@ async function mastersub_runner() {
     for(var i = 0 ; i < master_sub_cfg.subaccounts.length; i++)
     {
         var subaccount = master_sub_cfg.subaccounts[i];
-        sub_account_id = subaccount.account_id;
+        sub_account_id = parseInt(subaccount.account_id);
         sub_account_api_key = subaccount.api_key;
         console.log("applying to sub account: " + sub_account_id)
 

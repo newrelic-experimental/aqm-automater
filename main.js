@@ -73,7 +73,7 @@ async function runner() {
 
     await gqlutils.parseConfig(cfgpath, function(cfgobj){
         configobj = cfgobj;
-        accountidval = configobj.account.account_id;
+        accountidval = parseInt(configobj.account.account_id);
         API_KEY = configobj.account.api_key; //options.key;
         mycookie = configobj.account.cookie;
     });
