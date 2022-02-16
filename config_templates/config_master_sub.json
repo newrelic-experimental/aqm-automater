@@ -1,0 +1,21 @@
+{
+  "masteraccount": {
+    "account_id": 112121,
+    "api_key": " <api key> ",
+    "cookie": "NR adming cookie (optional)"
+  },
+  "subaccounts": [
+    {
+      "account_id": 34343,
+      "api_key": ""
+    },
+    {
+      "account_id": 34341,
+      "api_key": ""
+    },
+    {
+      "account_id": 343343,
+      "api_key": ""
+    }
+  ]
+}
