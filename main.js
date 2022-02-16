@@ -243,7 +243,7 @@ async function runner() {
             })
             // build webhook,  tied to master account
             console.log("Building Webhook body")
-            var wh1 = gqlutils.constructWebHook();  // note, this webhhook, will be used both in the master, and in all the subs
+            var wh1 = gqlutils.constructWebHook();  // note, this webhhook will be used both in the master, and in all the subs
 
             // add the webhook to the master account
             console.log("Applying webhook to master account in cfg file")

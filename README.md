@@ -15,32 +15,39 @@
 > 3.  Association of the notification channel with ALL of your accounts Alert policies. 
 
 ## Usage
-##### Single Account: node main.js -c yourconfig.json 
+##### example :    node main.js -c yourconfig.json 
+<br /> 
+There are two schemas for the config files, single and master sub depending on what you are targeting.
+
 >
-For single accounts, use the example config_single_account.json template for you config.
+>
+**single accounts:**  use the example **config_single_account.json** template for you config.
 >
 config file details:
- - account_id(required):  target account number
+ - account_id(required):  target account number, must be integer
  
- - api_key(required): either NR user key OR NR insights insert key
- >>  NR user key  will provide both authorization for the requests as well as the webhook auth. 
- >>  Insight insert key will only be used for webhook, so you must provide a cooke(see below)
+ - api_key(required): 
+    - NR CUSTOMERS: Please use a NR USER KEY for this value
+     
+    - NR ADMINS: If you don't have access to a customers NR USER KEY, use a NR Insights Insert key here, and include a browser cookie below.
+    
+ - cookie: NR admin cookie(from gql request header via browser).  
  
- - cookie: NR admin cookie(from gql request header via browser).  Please make sure that all internal quotes in cookie string are escaped
- 
->
-> 
-##### Master / Sub Account: node master_sub_main.js -c yourconfig.json
->
-For master/sub accounts, use the example config_master_sub.json template for you config.
->
->
-> 
+<br />
 
+**master/sub accounts:**  use the example **config_master_sub.json** template for you config.
+
+This template is used when you want to apply the aqm to both master and sub(child) accounts.  
+config file details:
+ 
+ - masteraccount(requied)  -- same as above
+ - subaccounts(requied)-- for each sub account you want to apply, add a apikey and account number.  
+    NR CUSTOMERS use NR user key for api key 
+    NR ADMINS use same as above . 
+ 
 ## Building
 
-before running the script install the required modules :   npm install
-
+before running the script install the required modules :  npm install
 
 ## Support
 
