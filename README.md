@@ -46,6 +46,16 @@ config file details:
     NR CUSTOMERS use NR user key for api key 
     NR ADMINS use same as above . 
  
+ 
+<br /> 
+
+**Testing the results**
+<br />
+Its a good idea to test if the script worked.  Go to your notification channels and find the AQMEvents channel, open it and 
+hit Test.  Make sure you get back a status 200. 
+Also,  check that the Alerts Quality Managment Dashboard is present in your account.  
+ 
+ 
 ## Building
 
 before running the script install the required modules :  npm install
