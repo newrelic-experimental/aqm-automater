@@ -17,10 +17,11 @@
 ## Usage
 ##### example :    node main.js -c yourconfig.json 
 <br /> 
-There are two schemas for the config files, single and master sub depending on what you are targeting.
 
->
->
+There are two schemas for the config files, single and master sub depending on what you are targeting.
+Example config files are located in the  **config_templates**  sub dir
+
+
 **single accounts:**  use the example **config_single_account.json** template for you config.
 >
 config file details:
