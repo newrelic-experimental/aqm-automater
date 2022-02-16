@@ -4,3 +4,4 @@ node_modules
 .vscode
 alert-quality-mgt-template.json
 myconfigs
+.idea
