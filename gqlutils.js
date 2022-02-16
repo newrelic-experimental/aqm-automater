@@ -7,7 +7,10 @@ var fetch = require('node-fetch');
 const DB_TEMPLATE = './alert-quality-mgt-template.json';
 var mycookie = undefined;
 
-async function dispatchToNewRelic(api_key, datapayload, callback)
+var myapi_key = undefined;
+var target_accountid = undefined;
+
+async function dispatchToNewRelic(datapayload, callback)
 {
     var url_cust = 'https://api.newrelic.com/graphql';
     var url_product = 'https://nerd-graph.service.newrelic.com/graphql';
@@ -23,7 +26,7 @@ async function dispatchToNewRelic(api_key, datapayload, callback)
         'Content-type': 'application/json',
         'Accept': 'application/json',
         'Accept-Charset': 'utf-8',
-        'x-api-key': api_key // 'dummy-required-value'
+        'x-api-key': myapi_key
     };
 
     const fetch_options = {
@@ -44,64 +47,66 @@ async function dispatchToNewRelic(api_key, datapayload, callback)
 
 var utils = module.exports = {
 
-     setAuthCookie: function(cookie)
-     {
-         mycookie = cookie;
-     },
-     constructWebHook: function(accountnumber, api_key)
-     {
-         var wh_body = '{"eventType":"nrAQMIncident","account_id": "$ACCOUNT_ID","account_name": "$ACCOUNT_NAME","closed_violations_count_critical": "$CLOSED_VIOLATIONS_COUNT_CRITICAL","closed_violations_count_warning": "$CLOSED_VIOLATIONS_COUNT_WARNING","condition_description": "$DESCRIPTION","condition_family_id": "$CONDITION_FAMILY_ID","condition_name": "$CONDITION_NAME","current_state": "$EVENT_STATE", "details": "$EVENT_DETAILS", "duration": "$DURATION", "event_type": "$EVENT_TYPE", "incident_acknowledge_url": "$INCIDENT_ACKNOWLEDGE_URL", "incident_id": "$INCIDENT_ID", "incident_url": "$INCIDENT_URL", "metadata": "$METADATA", "open_violations_count_critical": "$OPEN_VIOLATIONS_COUNT_CRITICAL", "open_violations_count_warning": "$OPEN_VIOLATIONS_COUNT_WARNING", "owner": "$EVENT_OWNER", "policy_name": "$POLICY_NAME", "policy_url": "$POLICY_URL", "runbook_url": "$RUNBOOK_URL", "severity": "$SEVERITY", "targets": "$TARGETS", "timestamp": "$TIMESTAMP", "timestamp_utc_string": "$TIMESTAMP_UTC_STRING", "violation_callback_url": "$VIOLATION_CALLBACK_URL", "violation_chart_url": "$VIOLATION_CHART_URL"}';
-
-         var wh1 = {
-             webhook: {
-                 name: "AQM Events",
-                 baseUrl: "https://insights-collector.newrelic.com/v1/accounts/"+ accountnumber+"/events",
-                 customHttpHeaders: [{name: "X-Insert-Key", value: api_key}],
-                 customPayloadBody: wh_body,
-                 customPayloadType: 'JSON'
-             }
-         }
-
-         return wh1;
-
-     },
-    parseConfig: async function (filepath, callback)
+    setAuthAndTargetAccount: function(account_id, apikey, cookie)
     {
-        // fixup the downloaded db template.. with account number
-        console.log('Reading Config File')
-        const data = await fsp.readFile(filepath, 'utf8');  // note this is using the promises version.
-
-        // cleanup the double quotes
-        const usingSplit = data.split(''); //convert to array.
-        var start = data.indexOf('cookie'); // find search start
-        var endstop = data.lastIndexOf("\"");  //find the last quote,
-        var quotecnt = 0;
-        for (var i = start+10; i < endstop; i++) {
-
-            if(usingSplit[i] == "\"" && usingSplit[i-1] != "\\")  // if we find a quote, and there is no \ at the prev index...
-            {
-                usingSplit.splice(i,0,"\\"); // insert \
-                quotecnt++;
-                endstop++; // every time we add a char, inc the last index.
-                i++;
+        console.log("Setting NR admin auth cookie")
+        target_accountid = account_id
+        mycookie = cookie;
+        myapi_key = apikey;
+    },
+    constructWebHook: function()
+    {
+        var wh_body = '{"eventType":"nrAQMIncident","account_id": "$ACCOUNT_ID","account_name": "$ACCOUNT_NAME","closed_violations_count_critical": "$CLOSED_VIOLATIONS_COUNT_CRITICAL","closed_violations_count_warning": "$CLOSED_VIOLATIONS_COUNT_WARNING","condition_description": "$DESCRIPTION","condition_family_id": "$CONDITION_FAMILY_ID","condition_name": "$CONDITION_NAME","current_state": "$EVENT_STATE", "details": "$EVENT_DETAILS", "duration": "$DURATION", "event_type": "$EVENT_TYPE", "incident_acknowledge_url": "$INCIDENT_ACKNOWLEDGE_URL", "incident_id": "$INCIDENT_ID", "incident_url": "$INCIDENT_URL", "metadata": "$METADATA", "open_violations_count_critical": "$OPEN_VIOLATIONS_COUNT_CRITICAL", "open_violations_count_warning": "$OPEN_VIOLATIONS_COUNT_WARNING", "owner": "$EVENT_OWNER", "policy_name": "$POLICY_NAME", "policy_url": "$POLICY_URL", "runbook_url": "$RUNBOOK_URL", "severity": "$SEVERITY", "targets": "$TARGETS", "timestamp": "$TIMESTAMP", "timestamp_utc_string": "$TIMESTAMP_UTC_STRING", "violation_callback_url": "$VIOLATION_CALLBACK_URL", "violation_chart_url": "$VIOLATION_CHART_URL"}';
+        var wh1 = {
+            webhook: {
+                name: "AQM Events",
+                baseUrl: "https://insights-collector.newrelic.com/v1/accounts/"+ target_accountid+"/events",
+                customHttpHeaders: [{name: "X-Insert-Key", value: myapi_key}],
+                customPayloadBody: wh_body,
+                customPayloadType: 'JSON'
             }
         }
-        console.log("quote count: "+ quotecnt);
-        var fixedup = usingSplit.join("");  // convert array back to string
-        var cfg = JSON.parse(fixedup);
+        return wh1;
 
-        // add check for account number is int
-       // if(cfg.account_id != undefined)
-        //{
-        //    if(typeof cfg.account_id === 'string')
-         //   {
-          //      cfg.account_id = parseInt(cfg.account_id);
-           //     console.log("bad account number has quotes, converted to int")
-           // }
-       // }
+    },
+    parseConfig: async function (filepath, callback)
+    {
+        var cfg = undefined;
+        var fixedup = undefined;
+        try {
+            // fixup the downloaded db template.. with account number
+            console.log('Reading/Parsing Config File')
+            const data = await fsp.readFile(filepath, 'utf8');  // note this is using the promises version.
+
+            // cleanup the double quotes, adding escapes
+            const usingSplit = data.split(''); //convert to array.
+            var start = data.indexOf('cookie'); // find search start
+            if(start == -1)
+                fixedup = data;
+            else {
+                var endstop = data.lastIndexOf("\"");  //find the last quote,
+                var quotecnt = 0;
+                for (var i = start + 10; i < endstop; i++) {
+
+                    if (usingSplit[i] == "\"" && usingSplit[i - 1] != "\\")  // if we find a quote, and there is no \ at the prev index...
+                    {
+                        usingSplit.splice(i, 0, "\\"); // insert \
+                        quotecnt++;
+                        endstop++; // every time we add a char, inc the last index.
+                        i++;
+                    }
+                }
+                // console.log("quote count: "+ quotecnt);
+                fixedup = usingSplit.join("");  // convert array back to string
+            }
+            cfg = JSON.parse(fixedup);
+        } catch (ex1)
+        {
+            console.log("config parse exception: "+ ex1.message);
+        }
         callback(cfg);
     },
-     downloadTemplate: async function(callback) {
+    downloadTemplate: async function(callback) {
 
         var config = {
             method: 'get',
@@ -135,7 +140,7 @@ var utils = module.exports = {
                 callback("exception:" + error);
             });
     },
-    addDashboardToAccount: async function(api_key, accountidval, customized_db)
+    addDashboardToAccount: async function(customized_db)
     {
         console.log("Uploading dashboard to your account")
         var datapayload2 = JSON.stringify({
@@ -146,15 +151,15 @@ var utils = module.exports = {
                     }
                 }
              }`,
-            variables: { "accountidval": accountidval, "dashboardval": customized_db }
+            variables: { "accountidval": target_accountid, "dashboardval": customized_db }
         });
 
 
-        await dispatchToNewRelic(api_key, datapayload2, function(result, data){
+        await dispatchToNewRelic(datapayload2, function(result, data){
             console.log("dashboard import result: " + result);
         })
     },
-    getPolicyIDlist: async function(api_key, accountidval, callback)
+    getPolicyIDlist: async function(callback)
     {
         //  *************** get policies ids ***************************************
         var datapayload_getpolicys = JSON.stringify({
@@ -173,11 +178,11 @@ var utils = module.exports = {
                     }
                 }
              }`,
-            variables: { "accountidval": accountidval}
+            variables: { "accountidval": target_accountid}
         });
 
-        console.log("Fetching list of polcies in account: " + accountidval)
-        await dispatchToNewRelic(api_key, datapayload_getpolicys, function (result, data) {
+        console.log("Fetching list of polcies in account: " + target_accountid)
+        await dispatchToNewRelic(datapayload_getpolicys, function (result, data) {
 
             var current_policies = [];
             if (data.actor.account.alerts.policiesSearch != undefined) {
@@ -193,7 +198,7 @@ var utils = module.exports = {
         })
 
     },
-    createAQMWebhook: async function(api_key, accountidval, webhhook_json, callback)
+    createAQMWebhook: async function(webhhook_json, callback)
     {
         var datapayload_alertwebhook = JSON.stringify({
             query: `mutation ($accountidval: Int!, $alertchannel: AlertsNotificationChannelCreateConfiguration!) {
@@ -212,24 +217,22 @@ var utils = module.exports = {
                     }
                 }
              }`,
-            variables: {"accountidval": accountidval, "alertchannel": webhhook_json}
+            variables: {"accountidval": target_accountid, "alertchannel": webhhook_json}
         });
 
-        console.log("Creating webhook in account: " + accountidval)
-        await dispatchToNewRelic(api_key, datapayload_alertwebhook, function (result, data) {
+        console.log("Creating webhook in account: " + target_accountid)
+        await dispatchToNewRelic(datapayload_alertwebhook, function (result, data) {
             var webhook_notification_channelid = undefined;
             if (data.alertsNotificationChannelCreate.notificationChannel != undefined) {
                 webhook_notification_channelid = data.alertsNotificationChannelCreate.notificationChannel.id
                 callback(webhook_notification_channelid);
-                //webhook_notification_channelid = data.alertsNotificationChannelCreate.notificationChannel.id;
             }
             console.log("webhook create: " + result + "  channel id: " + webhook_notification_channelid)
-            //   console.log("alert webhook setup " + result  + webhook_notification_channelid);
         })
     },
-    addWebHookToPolicyList: async function(api_key, accountidval, webhook_chan_id,  policies) {
+    addWebHookToPolicyList: async function(webhook_chan_id,  policies) {
 
-        console.log("Applying webhook to each policly")
+        console.log("Applying webhook to each policly in target account")
         for(var pidx = 0 ; pidx < policies.length; pidx++ ) {
 
             const targetpolid = policies[pidx];
@@ -246,14 +249,14 @@ var utils = module.exports = {
                 }
              }`,
                 variables: {
-                    "accountidval": accountidval,
+                    "accountidval": target_accountid,
                     "channelidval": webhook_chan_id,
                     "policyidval": targetpolid
                 }
             });
 
             console.log("Attaching webhook to policy: " + targetpolid)
-            await dispatchToNewRelic(api_key, datapayload_addchannel, function (result, data) {
+            await dispatchToNewRelic(datapayload_addchannel, function (result, data) {
                 console.log("add channel to policy " + result);
             })
         }
