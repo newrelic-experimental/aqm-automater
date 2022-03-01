@@ -49,12 +49,15 @@ var utils = module.exports = {
 
     setAuthAndTargetAccount: function(account_id, apikey, cookie)
     {
-        console.log("Setting NR admin auth cookie")
+        console.log("Setting Account / apik key and NR admin auth cookie")
+        console.log("AccountID: " + account_id);
+        console.log("Api-key: "+ apikey);
+        console.log("cookie: " + "to long to display")
         target_accountid = account_id
         mycookie = cookie;
         myapi_key = apikey;
     },
-    constructWebHook: function()
+    constructWebHook: function(webhhook_key)
     {
         var wh_body = '{\r\n  "eventType":"nrAQMIncident",\r\n  "account_id": "$ACCOUNT_ID",\r\n  "account_name": "$ACCOUNT_NAME",\r\n  "closed_violations_count_critical": "$CLOSED_VIOLATIONS_COUNT_CRITICAL",\r\n  "closed_violations_count_warning": "$CLOSED_VIOLATIONS_COUNT_WARNING",\r\n  "condition_description": "$DESCRIPTION",\r\n  "condition_family_id": "$CONDITION_FAMILY_ID",\r\n  "condition_name": "$CONDITION_NAME",\r\n  "current_state": "$EVENT_STATE",\r\n  "details": "$EVENT_DETAILS",\r\n  "duration": "$DURATION",\r\n  "event_type": "$EVENT_TYPE",\r\n  "incident_acknowledge_url": "$INCIDENT_ACKNOWLEDGE_URL",\r\n  "incident_id": "$INCIDENT_ID",\r\n  "incident_url": "$INCIDENT_URL",\r\n  "metadata": "$METADATA",\r\n  "open_violations_count_critical": "$OPEN_VIOLATIONS_COUNT_CRITICAL",\r\n  "open_violations_count_warning": "$OPEN_VIOLATIONS_COUNT_WARNING",\r\n  "owner": "$EVENT_OWNER",\r\n  "policy_name": "$POLICY_NAME",\r\n  "policy_url": "$POLICY_URL",\r\n  "runbook_url": "$RUNBOOK_URL",\r\n  "severity": "$SEVERITY",\r\n  "targets": "$TARGETS",\r\n  "timestamp": "$TIMESTAMP",\r\n  "timestamp_utc_string": "$TIMESTAMP_UTC_STRING",\r\n  "violation_callback_url": "$VIOLATION_CALLBACK_URL",\r\n  "violation_chart_url": "$VIOLATION_CHART_URL"\r\n}';
         
@@ -64,7 +67,7 @@ var utils = module.exports = {
             webhook: {
                 name: "AQM Events",
                 baseUrl: "https://insights-collector.newrelic.com/v1/accounts/"+ target_accountid+"/events",
-                customHttpHeaders: [{name: "X-Insert-Key", value: myapi_key}],
+                customHttpHeaders: [{name: "X-Insert-Key", value: webhhook_key}],
                 customPayloadBody: wh_body,
                 customPayloadType: 'JSON'
             }

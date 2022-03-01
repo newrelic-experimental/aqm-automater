@@ -28,9 +28,10 @@ const schema_single = {
             properties: {
                 account_id: {type : "integer"},
                 api_key: {type: "string"},
+                webhook_key: {type: "string"},
                 cookie: {type: "string"}
             },
-            required: ["account_id", "api_key"]
+            required: ["account_id", "api_key", "webhook_key"]
         }
     },
     required: ["account"],
@@ -46,9 +47,10 @@ const schema_master_sub = {
             properties: {
                 account_id: {type : "integer"},
                 api_key: {type: "string"},
+                webhook_key: {type: "string"},
                 cookie: {type: "string"}
             },
-            required: ["account_id", "api_key"]
+            required: ["account_id", "api_key", "webhook_key"]
         },
         subaccounts: {
             type: "array",
@@ -217,7 +219,7 @@ async function runner() {
 
             // ******************************* create webhook *************************************
             console.log("Building Webhook body")
-            var wh1 = gqlutils.constructWebHook();
+            var wh1 = gqlutils.constructWebHook(configobj.account.webhook_key);
 
             await  gqlutils.createAQMWebhook(wh1, function(wh_id) {
                 webhook_notification_channelid = wh_id;
@@ -243,7 +245,7 @@ async function runner() {
             })
             // build webhook,  tied to master account
             console.log("Building Webhook body")
-            var wh1 = gqlutils.constructWebHook();  // note, this webhhook will be used both in the master, and in all the subs
+            var wh1 = gqlutils.constructWebHook(configobj.masteraccount.webhook_key);  // note, this webhhook will be used both in the master, and in all the subs
 
             // add the webhook to the master account
             console.log("Applying webhook to master account in cfg file")
