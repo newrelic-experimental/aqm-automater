@@ -1,7 +1,8 @@
 {
   "account": {
     "account_id": 112233,
-    "api_key": "user or insights api key here. ",
+    "api_key": "user api key. ",
+    "webhook_key": "insights insert or license ingest",
     "cookie": "NR adming cookie (optional)"
   }
 }

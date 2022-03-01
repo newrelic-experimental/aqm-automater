@@ -1,21 +1,22 @@
 {
   "masteraccount": {
     "account_id": 112121,
-    "api_key": " <api key> ",
+    "api_key": " User api key ",
+    "webhook_key": "insights insert or license ingest key",
     "cookie": "NR adming cookie (optional)"
   },
   "subaccounts": [
     {
       "account_id": 34343,
-      "api_key": ""
+      "api_key": "user api key"
     },
     {
       "account_id": 34341,
-      "api_key": ""
+      "api_key": "user api key"
     },
     {
       "account_id": 343343,
-      "api_key": ""
+      "api_key": "user api key"
     }
   ]
 }
