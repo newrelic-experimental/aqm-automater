@@ -29,9 +29,11 @@ config file details:
  
  - api_key(required): 
     - NR CUSTOMERS: Please use a NR USER KEY for this value
-     
-    - NR ADMINS: If you don't have access to a customers NR USER KEY, use a NR Insights Insert key here, and include a browser cookie below.
     
+    - NR ADMINS: If you don't have access to a customers NR USER KEY, leave blank and include a browser cookie below.
+
+ - webhook_key(required): NR INSIGHTS INSERT key or NR LICENSE INGEST Key   
+
  - cookie: NR admin cookie(from gql request header via browser).  
  
 <br />
