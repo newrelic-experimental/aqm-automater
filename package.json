@@ -11,7 +11,7 @@
   "license": "ISC",
   "dependencies": {
     "ajv": "^8.10.0",
-    "axios": "^0.24.0",
+    "axios": "^0.28.0",
     "command-line-args": "^5.2.0",
     "graphql": "^16.0.1",
     "graphql-request": "^3.6.1",
